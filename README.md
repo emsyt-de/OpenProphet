@@ -489,6 +489,11 @@ clock cannot be verified, the heartbeat or order is skipped.
 Its configured heartbeat intervals and strategy rules still apply. Live accounts
 are excluded from this automatic startup.
 
+To autostart specific sandboxes, live ones included, list their ids in
+`OPENPROPHET_AUTOSTART_SANDBOXES` (comma-separated, e.g. `sbx_abc123`). Only the
+listed sandboxes start; permissions and strategy rules still apply. Enabling this
+for a live sandbox means real-money trading resumes after every restart or crash.
+
 Set `OPENPROPHET_METRICS_TOKEN` to enable the bearer-authenticated `/metrics`
 endpoint for Prometheus. It exports account equity, equity change, exposure,
 positions, open orders, and agent health, labeled by sandbox, mode, and model.

@@ -1729,4 +1729,27 @@ app.listen(PORT, HOST, () => {
   if (process.env.OPENPROPHET_AUTOSTART === '1' && activeAccount?.paper && goReady) {
     harness.start().catch(err => console.error(`  Agent autostart failed: ${err.message}`));
   }
+
+  // Explicit opt-in autostart for named sandboxes, including live ones. Nothing is started unless
+  // its sandbox id is listed, e.g. OPENPROPHET_AUTOSTART_SANDBOXES=sbx_abc123,sbx_def456
+  const autostartIds = (process.env.OPENPROPHET_AUTOSTART_SANDBOXES || '')
+    .split(',').map(s => s.trim()).filter(Boolean);
+  for (const sbxId of autostartIds) {
+    const sandbox = getSandbox(sbxId);
+    if (!sandbox) {
+      console.error(`  Autostart skipped: sandbox not found: ${sbxId}`);
+      continue;
+    }
+    const isActive = getActiveSandbox()?.id === sbxId;
+    if (isActive && !goReady) {
+      console.error(`  Autostart skipped for ${sbxId}: Go backend not ready`);
+      continue;
+    }
+    const startPromise = isActive
+      ? (harness.state.running ? Promise.resolve() : harness.start())
+      : orchestrator.startSandbox(sbxId);
+    startPromise
+      .then(() => console.log(`  Autostart: sandbox ${sandbox.name} (${sbxId}) started`))
+      .catch(err => console.error(`  Autostart failed for ${sbxId}: ${err.message}`));
+  }
 });
