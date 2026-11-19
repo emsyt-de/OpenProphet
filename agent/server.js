@@ -501,12 +501,20 @@ app.get('/api/events', (req, res) => {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no', // tell nginx not to buffer the stream
   });
   res.write(`event: state\ndata: ${JSON.stringify({ ...harness.state.toJSON(), sandboxId: getActiveSandbox()?.id || null })}\n\n`);
   res.write(`event: config\ndata: ${JSON.stringify(safeConfig())}\n\n`);
   sseClients.add(res);
   req.on('close', () => sseClients.delete(res));
 });
+
+// SSE comment ping keeps idle streams alive through proxies (nginx proxy_read_timeout etc.).
+setInterval(() => {
+  for (const client of sseClients) {
+    try { client.write(': ping\n\n'); } catch {}
+  }
+}, 15000).unref();
 
 // ── Agent Control ──────────────────────────────────────────────────
 app.post('/api/agent/start', async (req, res) => {

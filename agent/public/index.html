@@ -1339,6 +1339,18 @@ function formatSandboxPrefix(data) {
 let _eventSource = null;
 let _sseReconnectTimer = null;
 let _sseReconnectAttempts = 0;
+// Config normally arrives via the SSE 'config' event; if the stream is stalled or buffered by a
+// proxy, fetch it directly so Accounts/Terminal tabs don't stay empty.
+async function loadConfigFallback() {
+  try {
+    const r = await fetch('/api/config');
+    if (!r.ok) return;
+    config = await r.json();
+    renderAll();
+    refreshSelectedSandboxConfig();
+    refreshAiUsage();
+  } catch {}
+}
 function connectSSE() {
   if (_eventSource) { try { _eventSource.close(); } catch {} }
   if (_sseReconnectTimer) { clearTimeout(_sseReconnectTimer); _sseReconnectTimer = null; }
@@ -1346,6 +1358,7 @@ function connectSSE() {
   _eventSource = es;
   es.onopen = () => { 
     _sseReconnectAttempts = 0;
+    loadConfigFallback();
     document.getElementById('sse-status').textContent = 'ok'; 
     document.getElementById('sse-status').style.color = 'var(--success)'; 
   };
@@ -3801,7 +3814,7 @@ function startPolling() {
     setInterval(refreshAiUsage, 15000),
   ];
   // Run immediately on start
-  updateClock(); refreshPortfolio(); checkHealth(); checkAuth(); loadUpdateStatus(); refreshAiUsage();
+  loadConfigFallback(); updateClock(); refreshPortfolio(); checkHealth(); checkAuth(); loadUpdateStatus(); refreshAiUsage();
 }
 
 // ── Update / security notices ──────────────
